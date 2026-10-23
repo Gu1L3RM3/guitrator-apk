@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Guitrator APK
+Comment=Extract APKs from Android devices or download them from F-Droid
+Exec=guitrator-apk
+Icon=io.github.Gu1L3RM3.GuitratorApk
+Terminal=false
+Categories=Utility;

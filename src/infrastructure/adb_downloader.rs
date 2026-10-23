@@ -42,7 +42,11 @@ pub fn ensure_adb(cache_dir: &Path) -> Result<PathBuf, AdbError> {
 }
 
 fn which_adb() -> Result<PathBuf, ()> {
-    let name = if cfg!(target_os = "windows") { "adb.exe" } else { "adb" };
+    let name = if cfg!(target_os = "windows") {
+        "adb.exe"
+    } else {
+        "adb"
+    };
     std::env::var_os("PATH")
         .and_then(|paths| {
             std::env::split_paths(&paths)
@@ -53,7 +57,11 @@ fn which_adb() -> Result<PathBuf, ()> {
 }
 
 fn local_adb_path(cache_dir: &Path) -> PathBuf {
-    let bin = if cfg!(target_os = "windows") { "adb.exe" } else { "adb" };
+    let bin = if cfg!(target_os = "windows") {
+        "adb.exe"
+    } else {
+        "adb"
+    };
     cache_dir.join("platform-tools").join(bin)
 }
 
@@ -78,8 +86,7 @@ fn download_and_extract(cache_dir: &Path) -> Result<(), AdbError> {
         use std::os::unix::fs::PermissionsExt;
         let adb = local_adb_path(cache_dir);
         if adb.exists() {
-            fs::set_permissions(&adb, fs::Permissions::from_mode(0o755))
-                .map_err(AdbError::Io)?;
+            fs::set_permissions(&adb, fs::Permissions::from_mode(0o755)).map_err(AdbError::Io)?;
         }
     }
 

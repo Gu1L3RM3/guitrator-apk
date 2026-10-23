@@ -1,264 +1,86 @@
-# Guitrator APK Extractor
+# Guitrator APK
 
-> A cross-platform desktop tool to download installed APKs from Android devices connected via USB — with a GUI, a CLI, and an MCP server, all sharing the same core logic.
+[![CI](https://github.com/Gu1L3RM3/guitrator-apk/actions/workflows/ci.yml/badge.svg)](https://github.com/Gu1L3RM3/guitrator-apk/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![Rust](https://img.shields.io/badge/Rust-1.77%2B-orange?logo=rust)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey)
+Extract APKs from an Android phone over USB, or download them from F-Droid with no phone at all. Comes as a GUI, a CLI and an MCP server.
 
----
+If `adb` is not in your `PATH`, the app downloads Android platform-tools on first run.
 
-## Features
+## Install
 
-| Interface | Description |
-|-----------|-------------|
-| **GUI** | Native desktop window (`egui`/`eframe`) with search, scrollable app list, and folder picker |
-| **CLI** | Terminal commands (`list`, `pull`) via `clap` |
-| **MCP Server** | JSON-RPC stdio server for AI assistants (Cursor, Claude, etc.) |
+Download from the [Releases](https://github.com/Gu1L3RM3/guitrator-apk/releases) page. No Rust needed.
 
-- **ADB auto-download** — if `adb` is not found in `PATH`, platform-tools are downloaded automatically from Google.
-- **No device required for testing** — core logic is fully unit-tested with mock executors.
-- **Clean architecture** — Domain → Application → Presentation; no layer bleeds into another.
+| File | How |
+|------|-----|
+| `guitrator-apk.flatpak` | Double-click, or `flatpak install guitrator-apk.flatpak` |
+| `guitrator-apk-linux-x86_64` | Make it executable (`chmod +x`), then double-click |
+| `guitrator-apk-windows-x86_64.exe` | Double-click (SmartScreen will warn: the binary is unsigned) |
 
----
+Double-clicking opens the GUI. For phone features, enable **USB debugging** and accept the prompt on the phone. With Flatpak, your host also needs the Android udev rules so `adb` can see the phone.
 
-## Requirements
+## Use
 
-- Rust 1.77+ (`rustup.rs`)
-- An Android device with **USB Debugging enabled**
-- USB cable
+### GUI
 
-> **ADB is optional at install time.** If `adb` is not on your `PATH`, the app will download Android Platform Tools automatically on first run.
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/yourname/guitrator-apk
-cd guitrator-apk
-cargo build --release
-```
-
-The binary will be at `target/release/guitrator-apk`.
-
----
-
-## Usage
-
-### GUI (default)
-
-```bash
-./guitrator-apk
-# or explicitly:
-./guitrator-apk gui
-```
-
-1. Connect your Android device via USB with debugging enabled.
-2. Click **🔄 Refresh** to list installed packages.
-3. Use the search bar to filter by package name.
-4. Click **⬇ Extract** next to any app.
-5. Choose the destination folder with **Browse…**.
+Connect the phone, click **Refresh**, search, then click **Extract** next to an app and pick a folder.
 
 ### CLI
 
-**List all installed packages:**
+```bash
+guitrator-apk list                                           # installed packages on the phone
+guitrator-apk pull -p com.example.app -a /data/app/.../base.apk -d ~/Downloads
+guitrator-apk download -p org.fdroid.fdroid -d ~/apks        # from F-Droid, no phone needed
+guitrator-apk download -p org.fdroid.fdroid --install        # also install on the connected phone
+```
+
+`download` only accepts F-Droid packages, over HTTPS. It checks the file is a valid APK but does not verify F-Droid's index hash.
+
+### MCP (Claude Code, Codex)
+
+Keep the binary where it will stay, then register it:
 
 ```bash
-./guitrator-apk list
+guitrator-apk setup-mcp claude   # claude mcp add --scope user guitrator-apk -- <binary> mcp
+guitrator-apk setup-mcp codex    # codex mcp add guitrator-apk -- <binary> mcp
 ```
 
-```
-PACKAGE                                                      APK PATH
-----------------------------------------------------------------------------------------------------
-com.android.chrome                                           /data/app/com.android.chrome-abc/base.apk
-com.example.myapp                                            /data/app/com.example.myapp-xyz/base.apk
-
-2 package(s) found.
-```
-
-**Pull a specific APK:**
-
-```bash
-./guitrator-apk pull --package com.example.myapp \
-                     --apk-path /data/app/com.example.myapp-xyz/base.apk \
-                     --destination ~/Downloads
-```
-
-```
-Saved: /home/user/Downloads/com.example.myapp.apk
-```
-
-### MCP Server (AI integration)
-
-Start the server:
-
-```bash
-./guitrator-apk mcp
-```
-
-The server communicates over **stdin/stdout** using JSON-RPC 2.0. Logs go to **stderr** only, so stdout remains clean.
-
-#### Add to Cursor / Claude Desktop
-
-**Cursor** (`~/.cursor/mcp.json`):
+For other clients (Cursor, Claude Desktop), add this to their MCP config:
 
 ```json
-{
-  "mcpServers": {
-    "guitrator-apk": {
-      "command": "/path/to/guitrator-apk",
-      "args": ["mcp"]
-    }
-  }
-}
+{ "mcpServers": { "guitrator-apk": { "command": "/path/to/guitrator-apk", "args": ["mcp"] } } }
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`):
+| Kind | Name | Description |
+|------|------|-------------|
+| Resource | `adb://device/installed_apps` | Installed packages and their device APK paths |
+| Tool | `extract_apk` | `package_name`, `apk_path`, optional `destination` |
 
-```json
-{
-  "mcpServers": {
-    "guitrator-apk": {
-      "command": "/path/to/guitrator-apk",
-      "args": ["mcp"]
-    }
-  }
-}
-```
+## Build from source
 
-#### Available MCP Resources
-
-| URI | Description |
-|-----|-------------|
-| `adb://device/installed_apps` | Plain-text list of all installed packages and their device APK paths |
-
-#### Available MCP Tools
-
-| Tool | Arguments | Description |
-|------|-----------|-------------|
-| `extract_apk` | `package_name` *(required)*, `apk_path` *(required)*, `destination` *(optional, default `.`)* | Pulls the APK from the device to the local filesystem |
-
----
-
-## Project Structure
-
-```
-src/
-├── main.rs                        # Entry point — routes to GUI, CLI, or MCP
-├── lib.rs                         # Re-exports for integration tests
-│
-├── domain/
-│   ├── mod.rs
-│   └── app_info.rs                # AppInfo struct · AdbCommandExecutor trait · AdbError · parser
-│
-├── infrastructure/
-│   ├── mod.rs
-│   ├── adb_executor.rs            # RealAdbRunner — spawns the actual adb process
-│   └── adb_downloader.rs          # ensure_adb() — PATH check → cache → auto-download
-│
-├── application/
-│   ├── mod.rs
-│   ├── list_apps.rs               # ListApps use case
-│   └── extract_apk.rs             # ExtractApk use case
-│
-├── presentation/
-│   ├── mod.rs
-│   ├── cli.rs                     # clap CLI (list / pull subcommands)
-│   ├── gui.rs                     # egui UI with non-blocking background threads
-│   └── mcp.rs                     # JSON-RPC 2.0 stdio MCP server
-│
-└── tests/
-    └── integration_test.rs        # End-to-end tests with stub executor (no device needed)
-```
-
-### Architecture Diagram
-
-```
-┌─────────────────────────────────────────┐
-│               Presentation              │
-│   ┌───────┐  ┌───────┐  ┌───────────┐  │
-│   │  GUI  │  │  CLI  │  │ MCP Server│  │
-│   └───┬───┘  └───┬───┘  └─────┬─────┘  │
-└───────┼──────────┼────────────┼─────────┘
-        │          │            │
-┌───────▼──────────▼────────────▼─────────┐
-│              Application                │
-│        ListApps · ExtractApk            │
-└───────────────────┬─────────────────────┘
-                    │
-┌───────────────────▼─────────────────────┐
-│                 Domain                  │
-│   AppInfo · AdbCommandExecutor trait    │
-│         AdbError · parse_package_list   │
-└───────────────────┬─────────────────────┘
-                    │
-┌───────────────────▼─────────────────────┐
-│             Infrastructure              │
-│   RealAdbRunner · ensure_adb()          │
-└─────────────────────────────────────────┘
-```
-
----
-
-## Running Tests
-
-Tests do **not** require a physical device — the executor is mocked.
+Needs Rust 1.77+. On Linux also `libgtk-3-dev libxkbcommon-dev libssl-dev pkg-config`.
 
 ```bash
+cargo build --release     # binary at target/release/guitrator-apk
 cargo test
 ```
 
-Expected output:
+### Flatpak
 
-```
-running 7 tests
-test domain::app_info::tests::parse_three_packages ... ok
-test domain::app_info::tests::parse_empty_returns_empty_vec ... ok
-test domain::app_info::tests::parse_ignores_blank_lines ... ok
-test domain::app_info::tests::parse_missing_prefix_returns_error ... ok
-test domain::app_info::tests::parse_missing_equals_returns_error ... ok
-test application::list_apps::tests::parses_executor_output ... ok
-test application::list_apps::tests::propagates_no_device_error ... ok
-test application::extract_apk::tests::calls_adb_pull_with_correct_args ... ok
-test application::extract_apk::tests::returns_error_on_adb_failure ... ok
-test tests::integration_test::end_to_end_list_and_extract ... ok
+Tagged releases build the `.flatpak` automatically. To build it locally you need `flatpak-builder` and a committed `Cargo.lock`:
+
+```bash
+flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47 org.freedesktop.Sdk.Extension.rust-stable//24.08
+pip install aiohttp toml tomlkit
+curl -O https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+python3 flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
+flatpak-builder --user --force-clean --repo=repo build-dir packaging/flatpak/io.github.Gu1L3RM3.GuitratorApk.yml
+flatpak build-bundle repo guitrator-apk.flatpak io.github.Gu1L3RM3.GuitratorApk
 ```
 
----
+## Layout
 
-## Design Principles
+`domain` (types, `AdbCommandExecutor` trait) → `application` (use cases) → `presentation` (GUI/CLI/MCP), with `infrastructure` (real `adb`, F-Droid download) behind the trait. Tests use stub executors, so no phone is needed.
 
-### Clean Architecture / SOLID
+## Contributing
 
-- **SRP** — Each module has one reason to change. `adb_downloader` handles binary acquisition; `adb_executor` handles process spawning; `gui` handles rendering.
-- **OCP** — New interfaces (e.g. REST API) can be added without touching domain or application layers.
-- **DIP** — GUI and CLI depend on the `AdbCommandExecutor` *trait*, not on `RealAdbRunner` directly. Swap implementations freely.
-
-### TDD
-
-All domain parsing logic and use cases were written test-first. The `AdbCommandExecutor` trait exists specifically to allow fast, offline unit tests without a real device.
-
-### Error Handling
-
-No `unwrap()` in production code. All errors are typed via `thiserror` and propagate through `Result<_, AdbError>`.
-
-### MCP stdout cleanliness
-
-`env_logger` is configured to write exclusively to **stderr**. The MCP server can therefore use **stdout** purely for JSON-RPC frames without interference.
-
----
-
-## Platform Support
-
-| OS | Status |
-|----|--------|
-| Linux | ✅ Tested (Pop!_OS) |
-| Windows | ✅ Supported (cross-compiled; ADB auto-download uses the Windows zip) |
-| macOS | ⚠️ Should work, not officially tested |
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md). Released under the [MIT license](LICENSE); changes are listed in [CHANGELOG.md](CHANGELOG.md).

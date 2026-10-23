@@ -11,7 +11,9 @@ impl<'a> ListApps<'a> {
     }
 
     pub fn execute(&self) -> Result<Vec<AppInfo>, AdbError> {
-        let output = self.executor.run(&["shell", "pm", "list", "packages", "-f"])?;
+        let output = self
+            .executor
+            .run(&["shell", "pm", "list", "packages", "-f"])?;
         parse_package_list(&output)
     }
 }

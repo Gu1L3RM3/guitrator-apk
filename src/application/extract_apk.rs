@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use crate::domain::{AdbCommandExecutor, AdbError};
 
@@ -39,6 +38,7 @@ impl<'a> ExtractApk<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
 
     struct SpyExecutor {
         calls: Mutex<Vec<Vec<String>>>,
@@ -46,15 +46,31 @@ mod tests {
     }
 
     impl SpyExecutor {
-        fn ok() -> Self { Self { calls: Mutex::new(vec![]), fail: false } }
-        fn fail() -> Self { Self { calls: Mutex::new(vec![]), fail: true } }
+        fn ok() -> Self {
+            Self {
+                calls: Mutex::new(vec![]),
+                fail: false,
+            }
+        }
+        fn fail() -> Self {
+            Self {
+                calls: Mutex::new(vec![]),
+                fail: true,
+            }
+        }
     }
 
     impl AdbCommandExecutor for SpyExecutor {
         fn run(&self, args: &[&str]) -> Result<String, AdbError> {
-            self.calls.lock().unwrap().push(args.iter().map(|s| s.to_string()).collect());
+            self.calls
+                .lock()
+                .unwrap()
+                .push(args.iter().map(|s| s.to_string()).collect());
             if self.fail {
-                Err(AdbError::CommandFailed { code: 1, stderr: "fail".into() })
+                Err(AdbError::CommandFailed {
+                    code: 1,
+                    stderr: "fail".into(),
+                })
             } else {
                 Ok(String::new())
             }
@@ -65,11 +81,7 @@ mod tests {
     fn calls_adb_pull_with_correct_args() {
         let spy = SpyExecutor::ok();
         let tmp = std::env::temp_dir().join("guitrator_test_extract");
-        let result = ExtractApk::new(&spy).execute(
-            "/data/app/com.foo-1/base.apk",
-            &tmp,
-            "com.foo",
-        );
+        let result = ExtractApk::new(&spy).execute("/data/app/com.foo-1/base.apk", &tmp, "com.foo");
         assert!(result.is_ok());
         let calls = spy.calls.lock().unwrap();
         assert_eq!(calls[0][0], "pull");

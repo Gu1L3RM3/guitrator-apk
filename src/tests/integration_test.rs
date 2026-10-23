@@ -1,7 +1,7 @@
 //! Integration tests — no real device needed (stub executor).
 
-use guitrator_apk::application::{ExtractApk, ListApps};
-use guitrator_apk::domain::{AdbCommandExecutor, AdbError};
+use crate::application::{ExtractApk, ListApps};
+use crate::domain::{AdbCommandExecutor, AdbError};
 
 struct StubExecutor {
     list_response: &'static str,
@@ -14,7 +14,10 @@ impl AdbCommandExecutor for StubExecutor {
         } else if args.contains(&"pull") {
             Ok(String::new())
         } else {
-            Err(AdbError::CommandFailed { code: 1, stderr: "unknown command".into() })
+            Err(AdbError::CommandFailed {
+                code: 1,
+                stderr: "unknown command".into(),
+            })
         }
     }
 }
@@ -24,7 +27,9 @@ const SAMPLE: &str = "package:/data/app/com.example.one-1/base.apk=com.example.o
 
 #[test]
 fn end_to_end_list_and_extract() {
-    let stub = StubExecutor { list_response: SAMPLE };
+    let stub = StubExecutor {
+        list_response: SAMPLE,
+    };
     let apps = ListApps::new(&stub).execute().expect("list should succeed");
     assert_eq!(apps.len(), 2);
     assert_eq!(apps[0].package_name, "com.example.one");

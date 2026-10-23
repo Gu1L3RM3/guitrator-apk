@@ -12,3 +12,8 @@ target/
 
 # Downloaded ADB cache
 .cache/
+.flatpak-builder/
+build-dir/
+packaging/flatpak/cargo-sources.json
+repo/
+*.flatpak

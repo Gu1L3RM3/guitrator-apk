@@ -1,0 +1,32 @@
+app-id: io.github.Gu1L3RM3.GuitratorApk
+runtime: org.gnome.Platform # GTK3 is needed by the file picker (rfd)
+runtime-version: "47"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: guitrator-apk
+finish-args:
+  - --share=network # F-Droid downloads and the adb auto-download
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=all # USB access for adb
+  - --filesystem=xdg-download
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/guitrator-apk/cargo
+modules:
+  - name: guitrator-apk
+    buildsystem: simple
+    build-commands:
+      - cargo --offline build --release --locked
+      - install -Dm755 target/release/guitrator-apk /app/bin/guitrator-apk
+      - install -Dm644 assets/icon.png /app/share/icons/hicolor/256x256/apps/io.github.Gu1L3RM3.GuitratorApk.png
+      - install -Dm644 packaging/flatpak/io.github.Gu1L3RM3.GuitratorApk.metainfo.xml /app/share/metainfo/io.github.Gu1L3RM3.GuitratorApk.metainfo.xml
+      - install -Dm644 packaging/flatpak/io.github.Gu1L3RM3.GuitratorApk.desktop /app/share/applications/io.github.Gu1L3RM3.GuitratorApk.desktop
+    sources:
+      - type: dir
+        path: ../..
+        skip: [target, .git, .flatpak-builder, build-dir]
+      - cargo-sources.json # generated, see README

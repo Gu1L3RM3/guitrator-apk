@@ -85,13 +85,17 @@ mod tests {
 
     #[test]
     fn parse_ignores_blank_lines() {
-        let apps = parse_package_list("package:/data/app/com.foo-1/base.apk=com.foo\n\n   \n").unwrap();
+        let apps =
+            parse_package_list("package:/data/app/com.foo-1/base.apk=com.foo\n\n   \n").unwrap();
         assert_eq!(apps.len(), 1);
     }
 
     #[test]
     fn parse_missing_prefix_returns_error() {
-        assert!(matches!(parse_package_list("bad line"), Err(AdbError::ParseError(_))));
+        assert!(matches!(
+            parse_package_list("bad line"),
+            Err(AdbError::ParseError(_))
+        ));
     }
 
     #[test]

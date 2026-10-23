@@ -1,6 +1,9 @@
 [package]
 name = "guitrator-apk"
-version = "0.1.0"
+version = "1.0.0"
+license = "MIT"
+description = "Extract APKs from an Android phone over USB, or download them from F-Droid"
+repository = "https://github.com/Gu1L3RM3/guitrator-apk"
 edition = "2021"
 
 [[bin]]
