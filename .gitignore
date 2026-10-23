@@ -17,3 +17,6 @@ build-dir/
 packaging/flatpak/cargo-sources.json
 repo/
 *.flatpak
+
+# Screenshots of a real phone can show private apps; add only sanitized ones deliberately
+docs/screenshots/

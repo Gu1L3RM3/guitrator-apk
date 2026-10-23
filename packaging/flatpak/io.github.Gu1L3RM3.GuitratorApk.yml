@@ -1,6 +1,6 @@
 app-id: io.github.Gu1L3RM3.GuitratorApk
 runtime: org.gnome.Platform # GTK3 is needed by the file picker (rfd)
-runtime-version: "47"
+runtime-version: "51"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable

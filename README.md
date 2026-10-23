@@ -9,14 +9,24 @@ Guitrator APK gets Android app packages (APKs) for you in two ways:
 
 It ships as a desktop **GUI**, a **CLI**, and an **MCP server** so AI coding assistants (Claude Code, Codex, and other MCP clients) can use it directly.
 
+## The Phone tab
+
+The Phone tab shows the connected phone's model, Android version, RAM and storage. Each app shows its icon, the size of its APK and, when it is running, the memory it uses.
+
 ## Features
 
-- Browse installed apps on a connected phone, with search and a "Hide system apps" filter (on by default).
+- Browse installed apps on a connected phone, with each app's icon, APK size and memory use (RAM) when running.
+- Phone summary: model, Android version, RAM and storage in use.
+- Search, a "Hide system apps" filter (on by default), and sorting by name, APK size or memory.
+- In-app **Help** tab with phone setup, a quick start and troubleshooting.
+- App details screen: version, API levels, install and update dates, installer, size, memory and permissions.
+- Refresh button (and **F5**) that reloads the phone info and app list without blanking the screen.
 - Extract any app's APK to a folder you pick.
 - Download open-source apps from F-Droid over HTTPS, with a basic check that the file is a real APK.
 - Install a downloaded APK on the connected phone in one step (`--install`).
 - Automatic setup of Android platform-tools (`adb`) when it is not already on your system.
-- An MCP server exposing installed apps as a resource and APK extraction as a tool.
+- An MCP server that lets an AI assistant list apps, read phone and app details, extract APKs and download from F-Droid.
+- The same information from the terminal: `list --detailed`, `device` and `info`.
 - Prebuilt binaries for Linux and Windows, and a Flatpak bundle for Linux.
 
 ## Install
@@ -105,7 +115,9 @@ Run the app with no arguments, or with `gui`:
 guitrator-apk
 ```
 
-- **Phone tab:** click **Refresh** to load the apps on the connected phone. Type in the search box to filter by name or package. Untick **Hide system apps** to see preinstalled system packages. Click **Extract** next to an app and choose a folder.
+- **Phone tab:** click **Refresh** (top right, or press **F5**) to reload the phone info and the app list; the current list stays on screen while it reloads. Click an app's name or **Details** to see its version, install dates, installer, permissions and more, with **Extract APK** and **Copy package name** buttons. Type in the search box to filter by name or package. Untick **Hide system apps** to see preinstalled system packages. Use **Sort by** to order the list by name, APK size or memory. Click **Extract** next to an app and choose a folder.
+- **Icons** load in the background after the list appears, and are cached in your user cache folder so later refreshes are instant. Apps whose icon is only a vector drawable show a coloured letter instead.
+- **Help tab:** phone setup steps, a quick start, and a table of common errors with their fixes.
 - **F-Droid tab:** type a package name (for example `org.fdroid.fdroid`), tick **Also install on the connected phone** if you want, then click **Download**. Pressing Enter also submits.
 - The status bar shows what the app is doing and whether the phone is ready.
 
@@ -113,6 +125,9 @@ guitrator-apk
 
 ```bash
 guitrator-apk list
+guitrator-apk list --detailed --user-only
+guitrator-apk device
+guitrator-apk info -p com.example.app
 guitrator-apk pull -p com.example.app -a /data/app/~~abc==/com.example.app-xyz==/base.apk -d ~/Downloads
 guitrator-apk download -p org.fdroid.fdroid -d ~/apks
 guitrator-apk download -p org.fdroid.fdroid -d ~/apks --install
@@ -120,7 +135,9 @@ guitrator-apk download -p org.fdroid.fdroid -d ~/apks --install
 
 | Command | Options | What it does |
 |---------|---------|--------------|
-| `list` | — | Prints every installed package on the connected phone and its APK path on the device. |
+| `list` | `--detailed`, `--user-only` | Prints every installed package on the connected phone and its APK path on the device. `--detailed` adds each APK's size and the RAM it uses (a little slower); `--user-only` leaves out preinstalled system apps. |
+| `device` | — | Prints the phone's model, Android version, and RAM and storage in use. |
+| `info` | `-p, --package <name>` (required) | Prints everything Android reports about one app: version, API levels, install and update dates, installer, size, memory, and its allowed, denied and requested permissions. Fails if the package is not installed. |
 | `pull` | `-p, --package <name>` (required), `-a, --apk-path <path>` (required), `-d, --destination <dir>` (default `.`) | Copies one APK from the phone into the destination folder. Take the `-a` value from the `list` output. |
 | `download` | `-p, --package <name>` (required), `-d, --destination <dir>` (default `.`), `-i, --install` | Downloads the F-Droid build of the package as `<package>.apk`. With `--install`, runs `adb install -r` on the connected phone afterwards. |
 
@@ -143,6 +160,15 @@ guitrator-apk setup-mcp codex    # runs: codex mcp add guitrator-apk -- <binary>
 
 Both need the respective CLI installed and on your `PATH`.
 
+**Installed with Flatpak?** `setup-mcp` cannot run inside the sandbox, so register the app from a normal terminal instead:
+
+```bash
+claude mcp add --scope user guitrator-apk -- flatpak run io.github.Gu1L3RM3.GuitratorApk mcp
+codex mcp add guitrator-apk -- flatpak run io.github.Gu1L3RM3.GuitratorApk mcp
+```
+
+The Flatpak can only write to your Downloads folder, so give `extract_apk` and `download_apk` a `destination` inside it.
+
 For other clients (Cursor, Claude Desktop, and so on), add this entry to their MCP configuration:
 
 ```json
@@ -161,7 +187,13 @@ What the server exposes:
 | Kind | Name | Input | Description |
 |------|------|-------|-------------|
 | Resource | `adb://device/installed_apps` | — | Text list of installed packages and their device APK paths (`package → path`). |
+| Tool | `list_apps` | `detailed` (default `true`), `include_system` (default `false`) | Installed apps as a table, with APK size and RAM unless `detailed` is `false`. |
+| Tool | `device_info` | — | The phone's model, Android version, RAM and storage in use. |
+| Tool | `app_details` | `package_name` (required) | Version, API levels, install dates, installer, size, memory and permissions of one app. |
 | Tool | `extract_apk` | `package_name` (required), `apk_path` (required), `destination` (optional, default `.`) | Pulls an APK from the connected phone into `destination` and returns the saved path. |
+| Tool | `download_apk` | `package_name` (required), `destination` (optional, default `.`) | Downloads an F-Droid build into `destination` and returns the saved path. No phone needed. Unlike the CLI, it never installs the app. |
+
+Arguments the assistant gets wrong come back as a JSON-RPC `-32602` error, and phone or network failures as `-32000` with a readable message.
 
 The server writes logs to stderr only, so stdout carries just the JSON-RPC messages.
 
@@ -182,6 +214,7 @@ The automatic `adb` download needs network access, but only when `adb` is missin
 - **Extracted an app but it is missing from the list:** system apps are hidden by default in the GUI. Untick **Hide system apps**.
 - **`Error locating adb`:** the automatic download failed (usually no network). Install `adb` yourself (`android-sdk-platform-tools` on most Linux distributions, or the platform-tools zip from Google) and make sure it is on your `PATH`.
 - **Flatpak cannot write the APK:** pick a destination inside `~/Downloads`.
+- **An app shows a letter instead of its icon:** the icon is a vector drawable, which is not read yet. Apps whose icon is inside the APK's resources are read automatically.
 - **`setup-mcp` fails with "Could not run ...":** install the Claude Code or Codex CLI and make sure it is on your `PATH`, or register the server manually with the JSON above.
 - **Windows SmartScreen warning:** expected for the unsigned binary; see [Install](#install).
 
@@ -214,7 +247,7 @@ cargo test --locked
 Tagged releases build the `.flatpak` automatically. To build it locally you need `flatpak-builder` and the committed `Cargo.lock`:
 
 ```bash
-flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47 org.freedesktop.Sdk.Extension.rust-stable//24.08
+flatpak install flathub org.gnome.Platform//51 org.gnome.Sdk//51 org.freedesktop.Sdk.Extension.rust-stable//26.08
 pip install aiohttp toml tomlkit
 curl -O https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
 python3 flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
@@ -226,10 +259,10 @@ flatpak build-bundle repo guitrator-apk.flatpak io.github.Gu1L3RM3.GuitratorApk
 
 ```
 src/
-├── domain/          types (AppInfo, AdbError) and the AdbCommandExecutor trait
-├── application/     use cases: ListApps, ExtractApk
-├── infrastructure/  real adb runner, adb downloader, F-Droid download
-├── presentation/    GUI (egui), CLI (clap), MCP server
+├── domain/          types (AppInfo, DeviceInfo, AppDetails, AdbError), parsers and the AdbCommandExecutor trait
+├── application/     use cases: ListApps, ReadDeviceInfo, ReadAppDetails, ExtractApk
+├── infrastructure/  real adb runner, adb downloader, F-Droid download, APK icon reader and cache
+├── presentation/    GUI (egui) with details screen and help tab, CLI (clap), MCP server, shared text reports
 └── tests/           integration tests
 ```
 
