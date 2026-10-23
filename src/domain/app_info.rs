@@ -6,6 +6,10 @@ pub struct AppInfo {
     pub package_name: String,
     /// Path to the APK on the device, as reported by `adb shell pm list packages -f`.
     pub apk_path: String,
+    /// Size of the APK file in bytes. `None` when the device did not report it.
+    pub apk_size: Option<u64>,
+    /// Proportional set size of the app's running processes, in KiB. `None` when not running.
+    pub memory_kb: Option<u64>,
 }
 
 impl AppInfo {
@@ -13,7 +17,16 @@ impl AppInfo {
         Self {
             package_name: package_name.into(),
             apk_path: apk_path.into(),
+            apk_size: None,
+            memory_kb: None,
         }
+    }
+
+    /// Heuristic: apps preinstalled in read-only partitions.
+    pub fn is_system(&self) -> bool {
+        ["/system", "/product", "/vendor", "/apex", "/system_ext"]
+            .iter()
+            .any(|p| self.apk_path.starts_with(p))
     }
 }
 
@@ -25,8 +38,31 @@ pub enum AdbError {
     CommandFailed { code: i32, stderr: String },
     #[error("Failed to parse ADB output: {0}")]
     ParseError(String),
-    #[error("No device connected")]
+    #[error(
+        "No device connected. Connect the phone with a USB cable, enable USB debugging, \
+         then run `adb devices` to confirm it is listed."
+    )]
     NoDevice,
+    #[error(
+        "Device is unauthorized. Unlock the phone and accept the \"Allow USB debugging?\" \
+         prompt (tick \"Always allow\"). If no prompt appears, open Developer options, tap \
+         \"Revoke USB debugging authorizations\", then reconnect the cable."
+    )]
+    Unauthorized,
+    #[error(
+        "Device is offline. Unlock the phone, reconnect the USB cable, or restart the adb \
+         server with `adb kill-server`."
+    )]
+    Offline,
+    #[error(
+        "More than one device is connected. Disconnect the extra devices so only one phone \
+         remains, then try again."
+    )]
+    MultipleDevices,
+    #[error("Package not installed: {0}")]
+    PackageNotFound(String),
+    #[error("Invalid package name: {0}")]
+    InvalidPackageName(String),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     #[error("Network error: {0}")]
@@ -38,6 +74,12 @@ pub enum AdbError {
 /// Abstraction over running ADB commands. Real impl spawns a process; mock returns canned output.
 pub trait AdbCommandExecutor: Send + Sync {
     fn run(&self, args: &[&str]) -> Result<String, AdbError>;
+
+    /// Like `run`, but returns stdout untouched, for binary data (use with `adb exec-out`).
+    /// The default goes through `run`, which is only safe for text.
+    fn run_bytes(&self, args: &[&str]) -> Result<Vec<u8>, AdbError> {
+        self.run(args).map(String::into_bytes)
+    }
 }
 
 /// Parse `adb shell pm list packages -f` output into a list of AppInfo.

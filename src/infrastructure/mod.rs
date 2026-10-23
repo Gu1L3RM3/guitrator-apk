@@ -1,6 +1,11 @@
 pub mod adb_downloader;
 pub mod adb_executor;
+pub mod apk_icon;
+pub mod cache;
 pub mod fdroid;
+pub mod icons;
 pub use adb_downloader::ensure_adb;
 pub use adb_executor::RealAdbRunner;
+pub use cache::cache_dir;
 pub use fdroid::download_apk;
+pub use icons::{load_app_icon, IconPixels};

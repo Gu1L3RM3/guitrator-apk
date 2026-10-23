@@ -53,9 +53,7 @@ fn validate_package(package: &str) -> Result<(), AdbError> {
     if ok {
         Ok(())
     } else {
-        Err(AdbError::ParseError(format!(
-            "invalid package name: {package}"
-        )))
+        Err(AdbError::InvalidPackageName(package.to_string()))
     }
 }
 

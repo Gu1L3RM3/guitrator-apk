@@ -1,3 +1,4 @@
+use crate::domain::device_stats::{parse_apk_sizes, parse_pss_by_package};
 use crate::domain::{parse_package_list, AdbCommandExecutor, AdbError, AppInfo};
 
 /// Use case: list all installed packages on the connected device.
@@ -15,6 +16,39 @@ impl<'a> ListApps<'a> {
             .executor
             .run(&["shell", "pm", "list", "packages", "-f"])?;
         parse_package_list(&output)
+    }
+
+    /// Like `execute`, plus APK sizes and memory use. Those extra queries are best effort:
+    /// if the device refuses one, the affected fields stay `None` and the list still loads.
+    pub fn execute_detailed(&self) -> Result<Vec<AppInfo>, AdbError> {
+        let mut apps = self.execute()?;
+        if apps.is_empty() {
+            return Ok(apps);
+        }
+
+        let quoted: Vec<String> = apps.iter().map(|a| format!("'{}'", a.apk_path)).collect();
+        let stat = format!("stat -c '%s %n' {} 2>/dev/null; true", quoted.join(" "));
+        match self.executor.run(&["shell", &stat]) {
+            Ok(output) => {
+                let sizes = parse_apk_sizes(&output);
+                for app in &mut apps {
+                    app.apk_size = sizes.get(&app.apk_path).copied();
+                }
+            }
+            Err(e) => log::warn!("could not read APK sizes: {e}"),
+        }
+
+        match self.executor.run(&["shell", "dumpsys meminfo"]) {
+            Ok(output) => {
+                let memory = parse_pss_by_package(&output);
+                for app in &mut apps {
+                    app.memory_kb = memory.get(&app.package_name).copied();
+                }
+            }
+            Err(e) => log::warn!("could not read memory use: {e}"),
+        }
+
+        Ok(apps)
     }
 }
 

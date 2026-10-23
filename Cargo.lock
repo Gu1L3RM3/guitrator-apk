@@ -1878,6 +1878,7 @@ dependencies = [
  "dirs-next",
  "eframe",
  "env_logger",
+ "image",
  "log",
  "reqwest",
  "rfd",
