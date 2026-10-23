@@ -1,0 +1,28 @@
+[package]
+name = "guitrator-apk"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "guitrator-apk"
+path = "src/main.rs"
+
+[lib]
+name = "guitrator_apk"
+path = "src/lib.rs"
+
+[dependencies]
+eframe = "0.27"
+rfd = "0.14"
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", features = ["blocking"] }
+zip = "0.6"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.11"
+dirs-next = "2.0"
+anyhow = "1.0"
+
+[dev-dependencies]

@@ -1,0 +1,14 @@
+# Logs
+target/
+
+# Editor artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+
+# Downloaded ADB cache
+.cache/
