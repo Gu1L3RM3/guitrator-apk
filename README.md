@@ -35,7 +35,50 @@ Every release also includes a `SHA256SUMS` file. To verify a download on Linux:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
-Only Linux (x86_64) and Windows (x86_64) builds are published. macOS is not currently supported as a prebuilt target; you can [build it from source](#build-from-source) if you have a Rust toolchain.
+Only Linux (x86_64) and Windows (x86_64) builds are published. macOS is not currently supported as a prebuilt target; you can install it with Cargo (see below) if you have a Rust toolchain.
+
+### Other ways to install
+
+**Linux: prebuilt binary on your PATH**
+
+Instead of double-clicking, copy the binary to a folder on your `PATH` and run it from any terminal:
+
+```bash
+install -Dm755 guitrator-apk-linux-x86_64 ~/.local/bin/guitrator-apk
+guitrator-apk --help
+```
+
+`~/.local/bin` is on `PATH` on most distributions. If `guitrator-apk` is "command not found", add it to your shell profile: `export PATH="$HOME/.local/bin:$PATH"`.
+
+**Cargo, straight from GitHub (Linux, Windows, macOS)**
+
+If you have Rust 1.77+, Cargo can build and install the latest code in one command, without cloning the repo:
+
+```bash
+cargo install --git https://github.com/Gu1L3RM3/guitrator-apk --locked
+```
+
+The binary goes to Cargo's bin folder (`$CARGO_HOME/bin`, usually `~/.cargo/bin`). Make sure that folder is on your `PATH`. On Linux, install the GTK packages listed under [Build from source](#build-from-source) first.
+
+**Cargo, from a local clone**
+
+Use this if you want to hack on the code and install your local changes:
+
+```bash
+git clone https://github.com/Gu1L3RM3/guitrator-apk.git
+cd guitrator-apk
+cargo install --path . --locked
+```
+
+To update later, run `git pull` and then the same `cargo install --path . --locked` command again.
+
+**Flatpak, built locally**
+
+Build the bundle yourself instead of downloading the release file. The steps are in [Flatpak](#flatpak) under Build from source, and the result installs with `flatpak install guitrator-apk.flatpak`.
+
+**Register it with your AI assistant after installing**
+
+Any of the methods above puts the binary on your system. To use it from Claude Code or Codex, run `guitrator-apk setup-mcp claude` or `guitrator-apk setup-mcp codex` (see [MCP](#mcp-claude-code-codex-and-other-clients)).
 
 ### Flatpak notes
 
