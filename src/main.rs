@@ -5,28 +5,31 @@ mod presentation;
 
 use std::sync::Arc;
 
+use clap::Parser;
+
+use domain::AdbCommandExecutor;
+use presentation::cli::{Cli, Commands, McpTarget};
+
 fn main() {
     // All logs go to stderr — keeps stdout clean for MCP mode.
     env_logger::Builder::from_default_env()
         .target(env_logger::Target::Stderr)
         .init();
 
-    let args: Vec<String> = std::env::args().collect();
-    match args.get(1).map(String::as_str) {
-        Some("mcp") => run_mcp(),
-        Some("setup-mcp") => run_setup_mcp(args.get(2).map(String::as_str)),
-        Some("gui") | None => run_gui(),
-        _ => run_cli(),
+    // Parse before touching adb, so `--help` and usage errors work without a phone or adb.
+    let cli = Cli::parse();
+    match cli.command.unwrap_or(Commands::Gui) {
+        Commands::Gui => run_gui(),
+        Commands::Mcp => run_mcp(),
+        Commands::SetupMcp { target } => run_setup_mcp(target),
+        command => run_cli(command),
     }
 }
 
-fn build_executor() -> Arc<infrastructure::RealAdbRunner> {
-    let cache_dir = dirs_next::cache_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from(".cache"))
-        .join("guitrator-apk");
-
-    let adb_path = infrastructure::ensure_adb(&cache_dir).unwrap_or_else(|e| {
-        eprintln!("Error locating adb: {e}");
+fn build_executor() -> Arc<dyn AdbCommandExecutor> {
+    let adb_path = infrastructure::ensure_adb(&infrastructure::cache_dir()).unwrap_or_else(|e| {
+        eprintln!("Could not find or download adb: {e}");
+        eprintln!("Install Android platform-tools and make sure `adb` is on your PATH.");
         std::process::exit(1);
     });
 
@@ -34,16 +37,14 @@ fn build_executor() -> Arc<infrastructure::RealAdbRunner> {
 }
 
 fn run_gui() {
-    let executor = build_executor();
-    if let Err(e) = presentation::gui::launch(executor) {
+    if let Err(e) = presentation::gui::launch(build_executor()) {
         eprintln!("GUI error: {e}");
         std::process::exit(1);
     }
 }
 
-fn run_cli() {
-    let executor = build_executor();
-    if let Err(e) = presentation::cli::run(executor.as_ref()) {
+fn run_cli(command: Commands) {
+    if let Err(e) = presentation::cli::run(command, build_executor) {
         eprintln!("Error: {e}");
         std::process::exit(1);
     }
@@ -55,12 +56,17 @@ fn run_mcp() {
 }
 
 /// Registers this binary as an MCP server in the Claude Code or Codex CLI.
-fn run_setup_mcp(target: Option<&str>) {
+fn run_setup_mcp(target: McpTarget) {
+    if let Some(app_id) = std::env::var_os("FLATPAK_ID") {
+        eprintln!(
+            "{}",
+            presentation::flatpak_mcp_help(&app_id.to_string_lossy())
+        );
+        std::process::exit(1);
+    }
     let exe = std::env::current_exe().expect("cannot locate own executable");
-    let Some((cli, args)) = presentation::setup_mcp_command(target, &exe.to_string_lossy()) else {
-        eprintln!("Usage: guitrator-apk setup-mcp <claude|codex>");
-        std::process::exit(2);
-    };
+    let (cli, args) = presentation::setup_mcp_command(Some(target.name()), &exe.to_string_lossy())
+        .expect("every McpTarget has a registration command");
     match std::process::Command::new(cli).args(&args).status() {
         Ok(s) if s.success() => println!("MCP server 'guitrator-apk' added to {cli}."),
         Ok(s) => std::process::exit(s.code().unwrap_or(1)),
