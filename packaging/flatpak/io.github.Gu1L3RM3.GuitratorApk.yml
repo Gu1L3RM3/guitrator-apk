@@ -5,6 +5,7 @@ sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
 command: guitrator-apk
+appstream-compose: false # the compose tool is missing from the CI sandbox
 finish-args:
   - --share=network # F-Droid downloads and the adb auto-download
   - --share=ipc
