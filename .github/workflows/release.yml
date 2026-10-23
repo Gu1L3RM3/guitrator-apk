@@ -30,7 +30,7 @@ jobs:
       - run: cargo build --release --locked
       - run: cp target/release/${{ matrix.bin }} ${{ matrix.asset }}
         shell: bash
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: "${{ matrix.asset }}", path: "${{ matrix.asset }}" }
 
   flatpak:
@@ -46,7 +46,7 @@ jobs:
           python3 flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
           flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir packaging/flatpak/io.github.Gu1L3RM3.GuitratorApk.yml
           flatpak build-bundle repo guitrator-apk.flatpak io.github.Gu1L3RM3.GuitratorApk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: guitrator-apk.flatpak, path: guitrator-apk.flatpak }
 
   publish:
